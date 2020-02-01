@@ -17,6 +17,7 @@ public unsafe class MusicRing : MonoBehaviour
     public Material triangleMat;
     public AudioSampler audioSampler;
     public float ringPower = 2;
+    public float targetEuler = 0;
     private Transform pointer;
     private List<Vector3> positions;
     private AnimationCurve[] curves;
@@ -97,14 +98,11 @@ public unsafe class MusicRing : MonoBehaviour
 
         for (int i = 0; i < ringElement; ++i)
         {
-            pointer.eulerAngles = float3((float)i / (ringElement) * 360, 0, 0);
-            float dotV = dot(pointer.forward, float3(0, 1, 0));
-            dotV = pow(saturate(dotV), ringPower);
             float rand = UnityEngine.Random.Range(0.1f, 0.9f);
             for (int j = 0; j < v; ++j)
             {
                 randVs[j] = UnityEngine.Random.Range(0f, 1f);
-                keyframes[j] = new Keyframe(j / (v - 1f), randVs[j] * dotV);
+                keyframes[j] = new Keyframe(j / (v - 1f), randVs[j]);
             }
             curves[i] = new AnimationCurve(keyframes);
         }
@@ -154,12 +152,18 @@ public unsafe class MusicRing : MonoBehaviour
             {
                 audioSamples[i] = 0;
             }
-            audioSamples[i] = curves[i].Evaluate(audioSamples[i]);
+            pointer.eulerAngles = float3((float)i / (ringElement) * 360, 0, 0);
+            float3 dir = pointer.forward;
+            pointer.eulerAngles = float3(targetEuler, 0, 0);
+            float dotV = dot(dir, pointer.forward);
+            dotV = pow(saturate(dotV), ringPower);
+            audioSamples[i] = curves[i].Evaluate(audioSamples[i]) * dotV;
             samples[i] = Mathf.Lerp(samples[i], audioSamples[i], delta);
             if (!(samples[i] > 0) && !(samples[i] < 0))
             {
                 samples[i] = 0;
             }
+
         }
 
         for (int c = 0; c < ringElement; c++)
